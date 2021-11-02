@@ -6,6 +6,7 @@ public class CryptoFs
 {
     private readonly Random random;
     private readonly int plaintextMessageLength;
+    private readonly string encryptedFileExtension = ".cryptoFs";
 
     public CryptoFs(int plaintextMessageLength)
     {
@@ -13,38 +14,93 @@ public class CryptoFs
         this.plaintextMessageLength = plaintextMessageLength;
     }
 
-    public async Task CryptFilesInFolderRecursiveAsync(string folderPath, string outputPath, byte[] key, bool isEncrypt)
+    public async Task CryptFilesInFolderRecursiveAsync(
+        string folderPath,
+        string tempFolderPath,
+        string outputFolderPath,
+        byte[] key,
+        bool isEncrypt)
     {
         if (key.Length != XChaCha20.KEY_SIZE_IN_BYTES)
         {
             throw new ArgumentException("Key must be 32 bytes long");
         }
         var crypto = new XChaCha20Poly1305(key);
-        await CryptFilesInFolderRecursiveAsync(folderPath, outputPath, crypto, key, isEncrypt);
+        await CryptFilesInFolderRecursiveAsync(
+            folderPath,
+            tempFolderPath,
+            outputFolderPath,
+            crypto,
+            key,
+            isEncrypt);
     }
 
-    public async Task CryptFilesInFolderRecursiveAsync(string folderPath, string outputPath, XChaCha20Poly1305 crypto, byte[] key, bool isEncrypt)
+    public async Task CryptFilesInFolderRecursiveAsync(
+        string folderPath,
+        string tempFolderPath,
+        string outputFolderPath,
+        XChaCha20Poly1305 crypto,
+        byte[] key,
+        bool isEncrypt)
     {
         var files = Directory.GetFiles(folderPath);
         foreach (var file in files)
         {
-            using var inputFileStream = File.OpenRead(file);
-            string outputFilePath = Path.Combine(outputPath, Path.GetFileName(file));
-            Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
-            File.Delete(outputFilePath);
-            using var outputFileStream = File.Create(outputFilePath);
-            await CryptFileAsync(inputFileStream, outputFileStream, crypto, key, isEncrypt);
+            string outputFileName;
+            if (isEncrypt)
+            {
+                outputFileName = Path.GetFileNameWithoutExtension(file) + encryptedFileExtension;
+            }
+            else  // it is decrypting
+            {
+                if (file.EndsWith(encryptedFileExtension))
+                {
+                    outputFileName = Path.GetFileNameWithoutExtension(file);
+                }
+                else
+                {
+                    // it's not encrypted
+                    continue;
+                }
+            }
+            if (File.Exists(outputFileName))
+            {
+                // the output file already exists
+                continue;
+            }
+            string outputFilePath = Path.Combine(outputFolderPath, outputFileName);
+            string tempFilePath = Path.Combine(tempFolderPath, outputFileName);
+            Directory.CreateDirectory(tempFolderPath);
+            Directory.CreateDirectory(outputFolderPath);
+            File.Delete(tempFilePath);
+            using (var tempFileStream = File.Create(tempFilePath))
+            {
+                using var inputFileStream = File.OpenRead(file);
+                await CryptFileAsync(inputFileStream, tempFileStream, crypto, key, isEncrypt);
+            }
+            File.Move(tempFilePath, outputFilePath);
         }
 
         var folders = Directory.GetDirectories(folderPath);
-        foreach (var folder in folders)
+        foreach (var subfolder in folders)
         {
-            string outputFolderPath = Path.Combine(outputPath, Path.GetFileName(folder));
-            await CryptFilesInFolderRecursiveAsync(folder, outputFolderPath, crypto, key, isEncrypt);
+            string outputSubfolderPath = Path.Combine(outputFolderPath, Path.GetFileName(subfolder));
+            await CryptFilesInFolderRecursiveAsync(
+                subfolder,
+                tempFolderPath,
+                outputSubfolderPath,
+                crypto,
+                key,
+                isEncrypt);
         }
     }
 
-    public async Task CryptFileAsync(FileStream inputStream, FileStream outputStream, XChaCha20Poly1305 crypto, byte[] key, bool isEncrypt)
+    public async Task CryptFileAsync(
+        FileStream inputStream,
+        FileStream outputStream,
+        XChaCha20Poly1305 crypto,
+        byte[] key,
+        bool isEncrypt)
     {
         // treat each block as a message
 
@@ -97,7 +153,13 @@ public class CryptoFs
         }
     }
 
-    private byte[] CryptBlock(byte[] rawBlock, int blockDataSize, XChaCha20Poly1305 crypto, byte[] key, bool isEncrypt, ReadOnlySpan<byte> previousTag)
+    private byte[] CryptBlock(
+        byte[] rawBlock,
+        int blockDataSize,
+        XChaCha20Poly1305 crypto,
+        byte[] key,
+        bool isEncrypt,
+        ReadOnlySpan<byte> previousTag)
     {
         if (isEncrypt)
         {
@@ -109,7 +171,12 @@ public class CryptoFs
         }
     }
 
-    private byte[] EncryptBlock(byte[] rawBlock, int blockDataSize, XChaCha20Poly1305 crypto, byte[] key, ReadOnlySpan<byte> previousTag)
+    private byte[] EncryptBlock(
+        byte[] rawBlock,
+        int blockDataSize,
+        XChaCha20Poly1305 crypto,
+        byte[] key,
+        ReadOnlySpan<byte> previousTag)
     {
         var encryptedFileBlock = new EncryptedFileBlock(blockDataSize, null, null);
         this.random.NextBytes(encryptedFileBlock.Nonce);
@@ -123,7 +190,12 @@ public class CryptoFs
         return encryptedFileBlock.RawData;
     }
 
-    private byte[] DecryptBlock(byte[] rawBlock, int blockDataSize, XChaCha20Poly1305 crypto, byte[] key, ReadOnlySpan<byte> previousTag)
+    private byte[] DecryptBlock(
+        byte[] rawBlock,
+        int blockDataSize,
+        XChaCha20Poly1305 crypto,
+        byte[] key,
+        ReadOnlySpan<byte> previousTag)
     {
         var encryptedFileBlock = new EncryptedFileBlock(rawBlock, blockDataSize);
         var plaintext = new byte[encryptedFileBlock.Ciphertext.Length];
