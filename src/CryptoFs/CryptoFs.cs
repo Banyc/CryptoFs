@@ -79,8 +79,8 @@ public class CryptoFs
             }
             else
             {
-                // the previous encrypted block is now `fileBlock`
-                // swap `previousEncryptedBlock` and `fileBlock`
+                // the previous encrypted block is now `inputFileBlock`
+                // swap `previousEncryptedBlock` and `inputFileBlock`
                 if (previousEncryptedBlock == null)
                 {
                     previousEncryptedBlock = inputFileBlock;
