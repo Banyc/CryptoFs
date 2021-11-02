@@ -19,7 +19,8 @@ public class CryptoFs
         string tempFolderPath,
         string outputFolderPath,
         byte[] key,
-        bool isEncrypting)
+        bool isEncrypting,
+        bool isDeleteFilesAfterCrypting)
     {
         if (key.Length != XChaCha20.KEY_SIZE_IN_BYTES)
         {
@@ -33,7 +34,8 @@ public class CryptoFs
             outputFolderPath,
             crypto,
             key,
-            isEncrypting);
+            isEncrypting,
+            isDeleteFilesAfterCrypting);
     }
 
     public async Task CryptFilesInFolderRecursiveAsync(
@@ -43,7 +45,8 @@ public class CryptoFs
         string originalOutputFolderPath,
         XChaCha20Poly1305 crypto,
         byte[] key,
-        bool isEncrypting)
+        bool isEncrypting,
+        bool isDeleteFilesAfterCrypting)
     {
         var files = Directory.GetFiles(inputFolderPath);
         foreach (var file in files)
@@ -71,21 +74,28 @@ public class CryptoFs
                 }
             }
             string outputFilePath = Path.Combine(outputFolderPath, outputFileName);
-            if (File.Exists(outputFilePath))
+            if (!File.Exists(outputFilePath))
             {
-                // the output file already exists
-                continue;
+                // the output file does not exist, so we can encrypt/decrypt input file
+                string tempFilePath = Path.Combine(tempFolderPath, outputFileName);
+                Directory.CreateDirectory(tempFolderPath);
+                Directory.CreateDirectory(outputFolderPath);
+                File.Delete(tempFilePath);
+                using (var tempFileStream = File.Create(tempFilePath))
+                {
+                    using var inputFileStream = File.OpenRead(file);
+                    await CryptFileAsync(inputFileStream, tempFileStream, crypto, key, isEncrypting);
+                }
+                File.Move(tempFilePath, outputFilePath);
             }
-            string tempFilePath = Path.Combine(tempFolderPath, outputFileName);
-            Directory.CreateDirectory(tempFolderPath);
-            Directory.CreateDirectory(outputFolderPath);
-            File.Delete(tempFilePath);
-            using (var tempFileStream = File.Create(tempFilePath))
+            else
             {
-                using var inputFileStream = File.OpenRead(file);
-                await CryptFileAsync(inputFileStream, tempFileStream, crypto, key, isEncrypting);
+                // the output file already exists, no need to encrypt/decrypt input file again
             }
-            File.Move(tempFilePath, outputFilePath);
+            if (isDeleteFilesAfterCrypting)
+            {
+                File.Delete(file);
+            }
         }
 
         var folders = Directory.GetDirectories(inputFolderPath);
@@ -105,7 +115,8 @@ public class CryptoFs
                 originalOutputFolderPath,
                 crypto,
                 key,
-                isEncrypting);
+                isEncrypting,
+                isDeleteFilesAfterCrypting);
         }
     }
 
