@@ -19,7 +19,7 @@ public class CryptoFs
         string tempFolderPath,
         string outputFolderPath,
         byte[] key,
-        bool isEncrypt)
+        bool isEncrypting)
     {
         if (key.Length != XChaCha20.KEY_SIZE_IN_BYTES)
         {
@@ -30,32 +30,26 @@ public class CryptoFs
             folderPath,
             tempFolderPath,
             outputFolderPath,
+            outputFolderPath,
             crypto,
             key,
-            isEncrypt);
+            isEncrypting);
     }
 
     public async Task CryptFilesInFolderRecursiveAsync(
         string inputFolderPath,
         string tempFolderPath,
         string outputFolderPath,
+        string originalOutputFolderPath,
         XChaCha20Poly1305 crypto,
         byte[] key,
-        bool isEncrypt)
+        bool isEncrypting)
     {
-        // neither `tempFolderPath` nor `outputFolderPath` can be the child of `inputFolderPath`
-        if (tempFolderPath.StartsWith(inputFolderPath) ||
-            outputFolderPath.StartsWith(inputFolderPath))
-        {
-            throw new ArgumentException(
-                $"`tempFolderPath` \"{tempFolderPath}\" and `outputFolderPath` \"{outputFolderPath}\" cannot be a child of `inputFolderPath` \"{inputFolderPath}\"");
-        }
-
         var files = Directory.GetFiles(inputFolderPath);
         foreach (var file in files)
         {
             string outputFileName;
-            if (isEncrypt)
+            if (isEncrypting)
             {
                 outputFileName = Path.GetFileNameWithoutExtension(file) + encryptedFileExtension;
             }
@@ -71,12 +65,12 @@ public class CryptoFs
                     continue;
                 }
             }
-            if (File.Exists(outputFileName))
+            string outputFilePath = Path.Combine(outputFolderPath, outputFileName);
+            if (File.Exists(outputFilePath))
             {
                 // the output file already exists
                 continue;
             }
-            string outputFilePath = Path.Combine(outputFolderPath, outputFileName);
             string tempFilePath = Path.Combine(tempFolderPath, outputFileName);
             Directory.CreateDirectory(tempFolderPath);
             Directory.CreateDirectory(outputFolderPath);
@@ -84,7 +78,7 @@ public class CryptoFs
             using (var tempFileStream = File.Create(tempFilePath))
             {
                 using var inputFileStream = File.OpenRead(file);
-                await CryptFileAsync(inputFileStream, tempFileStream, crypto, key, isEncrypt);
+                await CryptFileAsync(inputFileStream, tempFileStream, crypto, key, isEncrypting);
             }
             File.Move(tempFilePath, outputFilePath);
         }
@@ -92,14 +86,21 @@ public class CryptoFs
         var folders = Directory.GetDirectories(inputFolderPath);
         foreach (var subfolder in folders)
         {
+            if (Path.GetFullPath(subfolder) == Path.GetFullPath(tempFolderPath) ||
+                Path.GetFullPath(subfolder) == Path.GetFullPath(originalOutputFolderPath))
+            {
+                // skip the temp and original output folders
+                continue;
+            }
             string outputSubfolderPath = Path.Combine(outputFolderPath, Path.GetFileName(subfolder));
             await CryptFilesInFolderRecursiveAsync(
                 subfolder,
                 tempFolderPath,
                 outputSubfolderPath,
+                originalOutputFolderPath,
                 crypto,
                 key,
-                isEncrypt);
+                isEncrypting);
         }
     }
 
@@ -108,12 +109,12 @@ public class CryptoFs
         FileStream outputStream,
         XChaCha20Poly1305 crypto,
         byte[] key,
-        bool isEncrypt)
+        bool isEncrypting)
     {
         // treat each block as a message
 
         int inputFileBlockSize;
-        if (isEncrypt)
+        if (isEncrypting)
         {
             inputFileBlockSize = this.plaintextMessageLength;
         }
@@ -131,12 +132,12 @@ public class CryptoFs
         for (i = 0; i < inputStream.Length; i += inputFileBlockSize)
         {
             int numReadByte = await inputStream.ReadAsync(inputFileBlock);
-            byte[] outputBlock = CryptBlock(inputFileBlock, numReadByte, crypto, key, isEncrypt,
+            byte[] outputBlock = CryptBlock(inputFileBlock, numReadByte, crypto, key, isEncrypting,
                 previousEncryptedBlock == null ?
                 null :
                 new EncryptedFileBlock(previousEncryptedBlock, previousEncryptedBlockDataSize).Tag);
             await outputStream.WriteAsync(outputBlock);
-            if (isEncrypt)
+            if (isEncrypting)
             {
                 previousEncryptedBlock = outputBlock;
                 previousEncryptedBlockDataSize = outputBlock.Length;
@@ -166,10 +167,10 @@ public class CryptoFs
         int blockDataSize,
         XChaCha20Poly1305 crypto,
         byte[] key,
-        bool isEncrypt,
+        bool isEncrypting,
         ReadOnlySpan<byte> previousTag)
     {
-        if (isEncrypt)
+        if (isEncrypting)
         {
             return EncryptBlock(rawBlock, blockDataSize, crypto, key, previousTag);
         }
