@@ -6,16 +6,18 @@ using CryptoFs.Cli.Models;
 await Crypt(new()
 {
     InputFolderPath = "test/input",
+    TempFolderPath = "test/temp",
     IsEncrypt = true,
     KeyPath = "test/key.txt",
-    OutputPath = "test/output"
+    OutputFolderPath = "test/output"
 });
 await Crypt(new()
 {
     InputFolderPath = "test/output",
+    TempFolderPath = "test/temp",
     IsEncrypt = false,
     KeyPath = "test/key.txt",
-    OutputPath = "test/output2"
+    OutputFolderPath = "test/output2"
 });
 
 // // parse arguments
@@ -42,5 +44,6 @@ async Task Crypt(Options opts)
     // byte[] key = keyBinaryReader.ReadBytes(keyFileStream.Length);
     byte[] key = new byte[keyFileStream.Length];
     await keyFileStream.ReadAsync(key, 0, key.Length);
-    await cryptoFs.CryptFilesInFolderRecursiveAsync(opts.InputFolderPath, opts.OutputPath, key, opts.IsEncrypt);
+    await cryptoFs.CryptFilesInFolderRecursiveAsync(
+        opts.InputFolderPath, opts.TempFolderPath, opts.OutputFolderPath, key, opts.IsEncrypt);
 }
