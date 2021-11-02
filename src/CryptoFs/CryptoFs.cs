@@ -30,6 +30,7 @@ public class CryptoFs
             folderPath,
             tempFolderPath,
             outputFolderPath,
+            outputFolderPath,
             crypto,
             key,
             isEncrypt);
@@ -39,18 +40,11 @@ public class CryptoFs
         string inputFolderPath,
         string tempFolderPath,
         string outputFolderPath,
+        string originalOutputFolderPath,
         XChaCha20Poly1305 crypto,
         byte[] key,
         bool isEncrypt)
     {
-        // neither `tempFolderPath` nor `outputFolderPath` can be the child of `inputFolderPath`
-        if (tempFolderPath.StartsWith(inputFolderPath) ||
-            outputFolderPath.StartsWith(inputFolderPath))
-        {
-            throw new ArgumentException(
-                $"`tempFolderPath` \"{tempFolderPath}\" and `outputFolderPath` \"{outputFolderPath}\" cannot be a child of `inputFolderPath` \"{inputFolderPath}\"");
-        }
-
         var files = Directory.GetFiles(inputFolderPath);
         foreach (var file in files)
         {
@@ -71,12 +65,12 @@ public class CryptoFs
                     continue;
                 }
             }
-            if (File.Exists(outputFileName))
+            string outputFilePath = Path.Combine(outputFolderPath, outputFileName);
+            if (File.Exists(outputFilePath))
             {
                 // the output file already exists
                 continue;
             }
-            string outputFilePath = Path.Combine(outputFolderPath, outputFileName);
             string tempFilePath = Path.Combine(tempFolderPath, outputFileName);
             Directory.CreateDirectory(tempFolderPath);
             Directory.CreateDirectory(outputFolderPath);
@@ -92,11 +86,18 @@ public class CryptoFs
         var folders = Directory.GetDirectories(inputFolderPath);
         foreach (var subfolder in folders)
         {
+            if (Path.GetFullPath(subfolder) == Path.GetFullPath(tempFolderPath) ||
+                Path.GetFullPath(subfolder) == Path.GetFullPath(originalOutputFolderPath))
+            {
+                // skip the temp and original output folders
+                continue;
+            }
             string outputSubfolderPath = Path.Combine(outputFolderPath, Path.GetFileName(subfolder));
             await CryptFilesInFolderRecursiveAsync(
                 subfolder,
                 tempFolderPath,
                 outputSubfolderPath,
+                originalOutputFolderPath,
                 crypto,
                 key,
                 isEncrypt);
