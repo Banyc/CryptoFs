@@ -51,6 +51,11 @@ public class CryptoFs
             string outputFileName;
             if (isEncrypting)
             {
+                if (file.EndsWith(encryptedFileExtension))
+                {
+                    // Skip files that are already encrypted
+                    continue;
+                }
                 outputFileName = Path.GetFileName(file) + encryptedFileExtension;
             }
             else  // it is decrypting
