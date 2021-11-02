@@ -20,6 +20,25 @@ await Crypt(new()
     OutputFolderPath = "test/output2"
 });
 
+await Crypt(new()
+{
+    InputFolderPath = "test/inplace",
+    TempFolderPath = "test/temp",
+    IsEncrypting = true,
+    KeyPath = "test/key.txt",
+    OutputFolderPath = "test/inplace",
+    IsDeleteFilesAfterCrypting = true,
+});
+await Crypt(new()
+{
+    InputFolderPath = "test/inplace",
+    TempFolderPath = "test/temp",
+    IsEncrypting = false,
+    KeyPath = "test/key.txt",
+    OutputFolderPath = "test/inplace",
+    IsDeleteFilesAfterCrypting = true,
+});
+
 // // parse arguments
 // var parseResult = Parser.Default.ParseArguments<Options>(args);
 // parseResult.WithParsed(opts =>
@@ -45,5 +64,10 @@ async Task Crypt(Options opts)
     byte[] key = new byte[keyFileStream.Length];
     await keyFileStream.ReadAsync(key, 0, key.Length);
     await cryptoFs.CryptFilesInFolderRecursiveAsync(
-        opts.InputFolderPath, opts.TempFolderPath, opts.OutputFolderPath, key, opts.IsEncrypting);
+        opts.InputFolderPath,
+        opts.TempFolderPath,
+        opts.OutputFolderPath,
+        key,
+        opts.IsEncrypting,
+        opts.IsDeleteFilesAfterCrypting);
 }

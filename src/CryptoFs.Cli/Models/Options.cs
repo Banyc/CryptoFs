@@ -18,6 +18,7 @@ namespace CryptoFs.Cli.Models
         public string KeyPath { get; set; }
         [Option('e', "encrypt", Required = true, HelpText = "Is encrypting?")]
         public bool IsEncrypting { get; set; }
-
+        [Option('d', "delete", Required = false, Default = false, HelpText = "Is deleting the input files after crypting?")]
+        public bool IsDeleteFilesAfterCrypting { get; set; }
     }
 }
