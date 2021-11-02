@@ -16,8 +16,8 @@ namespace CryptoFs.Cli.Models
         public string OutputFolderPath { get; set; }
         [Option('k', "key", Required = true, HelpText = "Path to the key file")]
         public string KeyPath { get; set; }
-        [Option('e', "encrypt", Required = true, HelpText = "Is encrypted?")]
-        public bool IsEncrypt { get; set; }
+        [Option('e', "encrypt", Required = true, HelpText = "Is encrypting?")]
+        public bool IsEncrypting { get; set; }
 
     }
 }

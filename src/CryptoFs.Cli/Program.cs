@@ -7,7 +7,7 @@ await Crypt(new()
 {
     InputFolderPath = "test/input",
     TempFolderPath = "test/temp",
-    IsEncrypt = true,
+    IsEncrypting = true,
     KeyPath = "test/key.txt",
     OutputFolderPath = "test/output"
 });
@@ -15,7 +15,7 @@ await Crypt(new()
 {
     InputFolderPath = "test/output",
     TempFolderPath = "test/temp",
-    IsEncrypt = false,
+    IsEncrypting = false,
     KeyPath = "test/key.txt",
     OutputFolderPath = "test/output2"
 });
@@ -45,5 +45,5 @@ async Task Crypt(Options opts)
     byte[] key = new byte[keyFileStream.Length];
     await keyFileStream.ReadAsync(key, 0, key.Length);
     await cryptoFs.CryptFilesInFolderRecursiveAsync(
-        opts.InputFolderPath, opts.TempFolderPath, opts.OutputFolderPath, key, opts.IsEncrypt);
+        opts.InputFolderPath, opts.TempFolderPath, opts.OutputFolderPath, key, opts.IsEncrypting);
 }
