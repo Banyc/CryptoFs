@@ -38,7 +38,7 @@ Console.WriteLine("Done");
 
 async Task Crypt(Options opts)
 {
-    CryptoFs.CryptoFs cryptoFs = new CryptoFs.CryptoFs(5);
+    CryptoFs.CryptoFs cryptoFs = new CryptoFs.CryptoFs(1 << 20);
     using var keyFileStream = File.OpenRead(opts.KeyPath);
     // using var keyBinaryReader = new BinaryReader(keyFileStream);
     // byte[] key = keyBinaryReader.ReadBytes(keyFileStream.Length);
