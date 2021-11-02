@@ -36,14 +36,22 @@ public class CryptoFs
     }
 
     public async Task CryptFilesInFolderRecursiveAsync(
-        string folderPath,
+        string inputFolderPath,
         string tempFolderPath,
         string outputFolderPath,
         XChaCha20Poly1305 crypto,
         byte[] key,
         bool isEncrypt)
     {
-        var files = Directory.GetFiles(folderPath);
+        // neither `tempFolderPath` nor `outputFolderPath` can be the child of `inputFolderPath`
+        if (tempFolderPath.StartsWith(inputFolderPath) ||
+            outputFolderPath.StartsWith(inputFolderPath))
+        {
+            throw new ArgumentException(
+                $"`tempFolderPath` \"{tempFolderPath}\" and `outputFolderPath` \"{outputFolderPath}\" cannot be a child of `inputFolderPath` \"{inputFolderPath}\"");
+        }
+
+        var files = Directory.GetFiles(inputFolderPath);
         foreach (var file in files)
         {
             string outputFileName;
@@ -81,7 +89,7 @@ public class CryptoFs
             File.Move(tempFilePath, outputFilePath);
         }
 
-        var folders = Directory.GetDirectories(folderPath);
+        var folders = Directory.GetDirectories(inputFolderPath);
         foreach (var subfolder in folders)
         {
             string outputSubfolderPath = Path.Combine(outputFolderPath, Path.GetFileName(subfolder));
