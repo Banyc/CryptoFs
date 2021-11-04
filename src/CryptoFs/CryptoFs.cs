@@ -15,7 +15,7 @@ public class CryptoFs
     }
 
     public async Task CryptFilesInFolderRecursiveAsync(
-        string folderPath,
+        string inputFolderPath,
         string tempFolderPath,
         string outputFolderPath,
         byte[] key,
@@ -28,7 +28,7 @@ public class CryptoFs
         }
         var crypto = new XChaCha20Poly1305(key);
         await CryptFilesInFolderRecursiveAsync(
-            folderPath,
+            inputFolderPath,
             tempFolderPath,
             outputFolderPath,
             outputFolderPath,
