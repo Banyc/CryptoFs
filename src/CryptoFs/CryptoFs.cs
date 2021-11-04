@@ -15,7 +15,7 @@ public class CryptoFs
     }
 
     public async Task CryptFilesInFolderRecursiveAsync(
-        string folderPath,
+        string inputFolderPath,
         string tempFolderPath,
         string outputFolderPath,
         byte[] key,
@@ -28,7 +28,7 @@ public class CryptoFs
         }
         var crypto = new XChaCha20Poly1305(key);
         await CryptFilesInFolderRecursiveAsync(
-            folderPath,
+            inputFolderPath,
             tempFolderPath,
             outputFolderPath,
             outputFolderPath,
@@ -38,7 +38,38 @@ public class CryptoFs
             isDeleteFilesAfterCrypting);
     }
 
-    public async Task CryptFilesInFolderRecursiveAsync(
+    public async Task CryptFileAsync(
+        string inputFilePath,
+        string tempFilePath,
+        string outputFilePath,
+        byte[] key,
+        bool isEncrypting,
+        bool isDeleteFilesAfterCrypting)
+    {
+        if (key.Length != XChaCha20.KEY_SIZE_IN_BYTES)
+        {
+            throw new ArgumentException("Key must be 32 bytes long");
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(tempFilePath));
+        Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
+        var crypto = new XChaCha20Poly1305(key);
+        using var inputFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read);
+        using var tempFileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write);
+        using var outputFileStream = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write);
+        await CryptFileAsync(
+            inputFileStream,
+            tempFileStream,
+            crypto,
+            key,
+            isEncrypting);
+        File.Move(tempFilePath, outputFilePath);
+        if (isDeleteFilesAfterCrypting)
+        {
+            File.Delete(inputFilePath);
+        }
+    }
+
+    private async Task CryptFilesInFolderRecursiveAsync(
         string inputFolderPath,
         string tempFolderPath,
         string outputFolderPath,
@@ -120,7 +151,7 @@ public class CryptoFs
         }
     }
 
-    public async Task CryptFileAsync(
+    private async Task CryptFileAsync(
         FileStream inputStream,
         FileStream outputStream,
         XChaCha20Poly1305 crypto,
