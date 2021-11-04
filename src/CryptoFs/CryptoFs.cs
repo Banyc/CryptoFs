@@ -40,8 +40,8 @@ public class CryptoFs
 
     public async Task CryptFileAsync(
         string inputFilePath,
-        string tempFilePath,
-        string outputFilePath,
+        string tempFolderPath,
+        string outputFolderPath,
         byte[] key,
         bool isEncrypting,
         bool isDeleteFilesAfterCrypting)
@@ -50,12 +50,22 @@ public class CryptoFs
         {
             throw new ArgumentException("Key must be 32 bytes long");
         }
-        Directory.CreateDirectory(Path.GetDirectoryName(tempFilePath));
-        Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
+        Directory.CreateDirectory(tempFolderPath);
+        Directory.CreateDirectory(outputFolderPath);
+        string outputFileName;
+        if (isEncrypting)
+        {
+            outputFileName = Path.GetFileNameWithoutExtension(inputFilePath) + encryptedFileExtension;
+        }
+        else
+        {
+            outputFileName = Path.GetFileNameWithoutExtension(inputFilePath);
+        }
+        string tempFilePath = Path.Combine(tempFolderPath, outputFileName);
+        string outputFilePath = Path.Combine(outputFolderPath, outputFileName);
         var crypto = new XChaCha20Poly1305(key);
         using var inputFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read);
         using var tempFileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write);
-        using var outputFileStream = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write);
         await CryptFileAsync(
             inputFileStream,
             tempFileStream,
