@@ -61,17 +61,21 @@ public class CryptoFs
         {
             outputFileName = Path.GetFileNameWithoutExtension(inputFilePath);
         }
-        string tempFilePath = Path.Combine(tempFolderPath, outputFileName);
         string outputFilePath = Path.Combine(outputFolderPath, outputFileName);
+        File.Delete(outputFilePath);
+        string tempFilePath = Path.Combine(tempFolderPath, outputFileName);
+        File.Delete(tempFilePath);
         var crypto = new XChaCha20Poly1305(key);
-        using var inputFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read);
-        using var tempFileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write);
-        await CryptFileAsync(
-            inputFileStream,
-            tempFileStream,
-            crypto,
-            key,
-            isEncrypting);
+        using (var tempFileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
+        {
+            using var inputFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read);
+            await CryptFileAsync(
+                inputFileStream,
+                tempFileStream,
+                crypto,
+                key,
+                isEncrypting);
+        }
         File.Move(tempFilePath, outputFilePath);
         if (isDeleteFilesAfterCrypting)
         {
