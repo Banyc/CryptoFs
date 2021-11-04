@@ -5,7 +5,7 @@ using CryptoFs.Cli.Models;
 // TEMP
 await Crypt(new()
 {
-    InputFolderPath = "test/input",
+    InputFileOrFolderPath = "test/input",
     TempFolderPath = "test/temp",
     IsEncrypting = true,
     KeyPath = "test/key.txt",
@@ -13,7 +13,7 @@ await Crypt(new()
 });
 await Crypt(new()
 {
-    InputFolderPath = "test/output",
+    InputFileOrFolderPath = "test/output",
     TempFolderPath = "test/temp",
     IsEncrypting = false,
     KeyPath = "test/key.txt",
@@ -22,7 +22,7 @@ await Crypt(new()
 
 await Crypt(new()
 {
-    InputFolderPath = "test/inplace",
+    InputFileOrFolderPath = "test/inplace",
     TempFolderPath = "test/temp",
     IsEncrypting = true,
     KeyPath = "test/key.txt",
@@ -31,12 +31,31 @@ await Crypt(new()
 });
 await Crypt(new()
 {
-    InputFolderPath = "test/inplace",
+    InputFileOrFolderPath = "test/inplace",
     TempFolderPath = "test/temp",
     IsEncrypting = false,
     KeyPath = "test/key.txt",
     OutputFolderPath = "test/inplace",
     IsDeleteFilesAfterCrypting = true,
+});
+
+await Crypt(new()
+{
+    InputFileOrFolderPath = "test/input/a.file",
+    TempFolderPath = "test/temp",
+    IsEncrypting = true,
+    KeyPath = "test/key.txt",
+    OutputFolderPath = "test/output",
+    IsDeleteFilesAfterCrypting = false,
+});
+await Crypt(new()
+{
+    InputFileOrFolderPath = "test/output",
+    TempFolderPath = "test/temp",
+    IsEncrypting = false,
+    KeyPath = "test/key.txt",
+    OutputFolderPath = "test/output2",
+    IsDeleteFilesAfterCrypting = false,
 });
 
 // // parse arguments
@@ -63,11 +82,24 @@ async Task Crypt(Options opts)
     // byte[] key = keyBinaryReader.ReadBytes(keyFileStream.Length);
     byte[] key = new byte[keyFileStream.Length];
     await keyFileStream.ReadAsync(key, 0, key.Length);
-    await cryptoFs.CryptFilesInFolderRecursiveAsync(
-        opts.InputFolderPath,
-        opts.TempFolderPath,
-        opts.OutputFolderPath,
-        key,
-        opts.IsEncrypting,
-        opts.IsDeleteFilesAfterCrypting);
+    if (File.Exists(opts.InputFileOrFolderPath))
+    {
+        await cryptoFs.CryptFileAsync(
+            opts.InputFileOrFolderPath,
+            opts.TempFolderPath,
+            opts.OutputFolderPath,
+            key,
+            opts.IsEncrypting,
+            opts.IsDeleteFilesAfterCrypting);
+    }
+    else
+    {
+        await cryptoFs.CryptFilesInFolderRecursiveAsync(
+            opts.InputFileOrFolderPath,
+            opts.TempFolderPath,
+            opts.OutputFolderPath,
+            key,
+            opts.IsEncrypting,
+            opts.IsDeleteFilesAfterCrypting);
+    }
 }

@@ -8,8 +8,8 @@ namespace CryptoFs.Cli.Models
 {
     public class Options
     {
-        [Option('i', "input", Required = true, HelpText = "Path to input folder")]
-        public string InputFolderPath { get; set; }
+        [Option('i', "input", Required = true, HelpText = "Path to input file/ folder")]
+        public string InputFileOrFolderPath { get; set; }
         [Option('t', "temp", Required = true, HelpText = "Path to temp folder")]
         public string TempFolderPath { get; set; }
         [Option('o', "output", Required = true, HelpText = "Path to output folder")]
